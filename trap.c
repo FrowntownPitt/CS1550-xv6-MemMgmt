@@ -14,6 +14,50 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
+static pte_t *
+walkpgdir(pde_t *pgdir, const void *va, int alloc)
+{
+  pde_t *pde;
+  pte_t *pgtab;
+
+  pde = &pgdir[PDX(va)];
+  if(*pde & PTE_P){
+    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+  } else {
+    if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
+      return 0;
+    // Make sure all those PTE_P bits are zero.
+    memset(pgtab, 0, PGSIZE);
+    // The permissions here are overly generous, but they can
+    // be further restricted by the permissions in the page table
+    // entries, if necessary.
+    *pde = V2P(pgtab) | PTE_P | PTE_W | PTE_U;
+  }
+  return &pgtab[PTX(va)];
+}
+
+static int
+mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
+{
+  char *a, *last;
+  pte_t *pte;
+
+  a = (char*)PGROUNDDOWN((uint)va);
+  last = (char*)PGROUNDDOWN(((uint)va) + size - 1);
+  for(;;){
+    if((pte = walkpgdir(pgdir, a, 1)) == 0)
+      return -1;
+    if(*pte & PTE_P)
+      panic("remap");
+    *pte = pa | perm | PTE_P;
+    if(a == last)
+      break;
+    a += PGSIZE;
+    pa += PGSIZE;
+  }
+  return 0;
+}
+
 void
 tvinit(void)
 {
@@ -77,7 +121,46 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:
 
+    cprintf("Page fault!\n");
+
+    if(myproc()->nPhysPages > MAX_PHYS_PAGES){
+      cprintf("Using too much space.  Killing...\n");
+      myproc()->killed = 1;
+    } else {
+      myproc()->nPhysPages++;
+      myproc()->nPages++;
+
+      uint sz = myproc()->sz;
+      //sz = allocuvm(myproc()->pgdir, sz, sz+1);
+
+      char *mem = kalloc();
+
+      if(mem == 0){
+        cprintf("Could not allocate a page.  Killing...\n");
+        myproc()->killed = 1;
+      } else {
+
+        memset(mem, 0, PGSIZE);
+
+
+        if(mappages(myproc()->pgdir, (char *)PGROUNDUP(sz), PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+          cprintf("allocuvm out of memory (2).  Killing...\n");
+          kfree(mem);
+          myproc()->killed = 1;
+        }
+
+
+        cprintf("Page allocated!\n");
+        cprintf("Process size (in pages): %d\n", (myproc()->sz) / PGSIZE);
+
+        myproc()->sz += PGSIZE;
+      }
+    }
+
+    //myproc()->killed = 1;
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

@@ -39,6 +39,9 @@ struct proc {
   uint sz;                     // Size of process memory (bytes)
   pde_t* pgdir;                // Page table
   struct file *swapFile;       // Page File
+  int nPages;                  // number of virtual pages
+  int nPhysPages;              // number of pages in physical memory
+
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
   int pid;                     // Process ID
