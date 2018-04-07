@@ -123,16 +123,61 @@ trap(struct trapframe *tf)
     break;
   case T_PGFLT:
 
-    cprintf("Page fault!\n");
+    //cprintf("\nPage fault! addr0x%x Process %d size %d eip0x%x\n",
+    // rcr2(), myproc()->pid, myproc()->nPages, tf->eip);
 
     if(myproc()->nPhysPages > MAX_PHYS_PAGES){
       cprintf("Using too much space.  Killing...\n");
       myproc()->killed = 1;
     } else {
+
+      if(rcr2() > KERNBASE){
+        cprintf("Memory address too high. Ignoring request\n");
+        break;
+      }
+      //uint sz = myproc()->sz;
+
+      uint a = PGROUNDDOWN(rcr2());
+
+      struct proc *curproc = myproc();
+
+      //cprintf("Physical Address: %x\n",V2P(rcr2()));
+
+      char *mem = kalloc();
+
+      if(mem == 0){
+        cprintf("Could not allocate more memory. Killing...\n");
+        curproc->killed = 1;
+        break;
+      }
+
+      //cprintf("Newly allocated memory: va(0x%x) pa(0x%x)\n", mem, V2P(mem));
+
+      memset(mem, 0, PGSIZE);
+
+      if(mappages(curproc->pgdir, (char *)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+        cprintf("Could not allocate more memory. Killing...\n");
+        curproc->killed = 1;
+        break;
+      }
+
       myproc()->nPhysPages++;
       myproc()->nPages++;
+      //myproc()->sz += 1;
 
-      uint sz = myproc()->sz;
+      /*if((sz = allocuvm(curproc->pgdir, sz, sz+PGSIZE)) == 0){
+        cprintf("Could not allocate a page.  Killing...\n");
+      } else {
+        curproc->sz += PGSIZE;
+      }*/
+
+
+
+      //cprintf("Allocated memory! New process size (in pages): %d\n", curproc->sz/PGSIZE);
+
+      //switchuvm(curproc);
+
+      /*myproc()->sz += PGSIZE;
       //sz = allocuvm(myproc()->pgdir, sz, sz+1);
 
       char *mem = kalloc();
@@ -153,10 +198,9 @@ trap(struct trapframe *tf)
 
 
         cprintf("Page allocated!\n");
-        cprintf("Process size (in pages): %d\n", (myproc()->sz) / PGSIZE);
+        cprintf("Process size (in pages): %d\n", (myproc()->sz)/PGSIZE);
 
-        myproc()->sz += PGSIZE;
-      }
+      }*/
     }
 
     //myproc()->killed = 1;

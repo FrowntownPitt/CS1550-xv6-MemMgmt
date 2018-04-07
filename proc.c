@@ -130,6 +130,9 @@ userinit(void)
     panic("userinit: out of memory?");
   inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
   p->sz = PGSIZE;
+  p->nPages = 1;
+  p->nPhysPages = 1;
+
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
   p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
@@ -197,6 +200,9 @@ fork(void)
     return -1;
   }
   np->sz = curproc->sz;
+  np->nPages = curproc->nPages;
+  np->nPhysPages = curproc->nPhysPages;
+
   np->parent = curproc;
   *np->tf = *curproc->tf;
 
@@ -511,11 +517,12 @@ procdump(void)
   [RUNNING]   "run   ",
   [ZOMBIE]    "zombie"
   };
-  int i;
+  //int i;
   struct proc *p;
   char *state;
-  uint pc[10];
+  //uint pc[10];
 
+  cprintf("\n pid \t| state\t| name   \t| Size \t| # Pages\t\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -523,12 +530,16 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
+    cprintf(" %d \t| %s \t| %s\t| ", p->pid, state, p->name);
     if(p->state == SLEEPING){
-      getcallerpcs((uint*)p->context->ebp+2, pc);
-      for(i=0; i<10 && pc[i] != 0; i++)
-        cprintf(" %p", pc[i]);
+
+      cprintf("%d \t| %d \t", p->sz/PGSIZE, p->nPages);
+
+      //getcallerpcs((uint*)p->context->ebp+2, pc);
+      //or(i=0; i<10 && pc[i] != 0; i++)
+      //  cprintf(" %p", pc[i]);
     }
     cprintf("\n");
   }
+  cprintf("\n");
 }
