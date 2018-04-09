@@ -14,49 +14,8 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
-static pte_t *
-walkpgdir(pde_t *pgdir, const void *va, int alloc)
-{
-  pde_t *pde;
-  pte_t *pgtab;
-
-  pde = &pgdir[PDX(va)];
-  if(*pde & PTE_P){
-    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-  } else {
-    if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
-      return 0;
-    // Make sure all those PTE_P bits are zero.
-    memset(pgtab, 0, PGSIZE);
-    // The permissions here are overly generous, but they can
-    // be further restricted by the permissions in the page table
-    // entries, if necessary.
-    *pde = V2P(pgtab) | PTE_P | PTE_W | PTE_U;
-  }
-  return &pgtab[PTX(va)];
-}
-
-static int
-mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
-{
-  char *a, *last;
-  pte_t *pte;
-
-  a = (char*)PGROUNDDOWN((uint)va);
-  last = (char*)PGROUNDDOWN(((uint)va) + size - 1);
-  for(;;){
-    if((pte = walkpgdir(pgdir, a, 1)) == 0)
-      return -1;
-    if(*pte & PTE_P)
-      panic("remap");
-    *pte = pa | perm | PTE_P;
-    if(a == last)
-      break;
-    a += PGSIZE;
-    pa += PGSIZE;
-  }
-  return 0;
-}
+pte_t *walkpgdir(pde_t *pgdir, const void *va, int alloc);
+int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 
 void
 tvinit(void)
@@ -126,10 +85,41 @@ trap(struct trapframe *tf)
     //cprintf("\nPage fault! addr0x%x Process %d size %d eip0x%x\n",
     // rcr2(), myproc()->pid, myproc()->nPages, tf->eip);
 
-    if(myproc()->nPhysPages > MAX_PHYS_PAGES){
-      cprintf("Using more than physical memory. Swapping\n");
-      myproc()->killed = 1;
+    if(myproc()->nPages >= MAX_PAGES){
+      cprintf("Using too much memory.  Killing...\n");
+      //myproc()->killed = 1;
+    }
+    else if(myproc()->nPages >= MAX_PHYS_PAGES){
+      cprintf("Using more than physical memory. Swapping...\n");
+
+      struct proc *p = myproc();
+
+      pte_t *pg = walkpgdir(p->pgdir, (void *)rcr2(), 0);
+
+      if(pg && ((int)pg & PTE_PG)){
+        cprintf("Swapped out\n");
+      } else {
+        cprintf("Not swapped out\n");
+        myproc()->nPages++;
+
+        //uint a = PGROUNDDOWN(rcr2());
+
+
+      }
+
+      cprintf("New mem addr 0x%x\n", pg);
+
+      pte_t *victim = walkpgdir(p->pgdir, (void *)(p->pgdir)[0], 0);
+
+      cprintf("Victim: 0x%x\n", (void *)victim);
+
+      
+
+      //myproc()->nPages++;
+      //myproc()->killed = 1;
     } else {
+
+      cprintf("Allocating memory\n");
 
       if(rcr2() > KERNBASE){
         cprintf("Memory address too high. Ignoring request\n");
@@ -163,47 +153,7 @@ trap(struct trapframe *tf)
 
       myproc()->nPhysPages++;
       myproc()->nPages++;
-      //myproc()->sz += 1;
-
-      /*if((sz = allocuvm(curproc->pgdir, sz, sz+PGSIZE)) == 0){
-        cprintf("Could not allocate a page.  Killing...\n");
-      } else {
-        curproc->sz += PGSIZE;
-      }*/
-
-
-
-      //cprintf("Allocated memory! New process size (in pages): %d\n", curproc->sz/PGSIZE);
-
-      //switchuvm(curproc);
-
-      /*myproc()->sz += PGSIZE;
-      //sz = allocuvm(myproc()->pgdir, sz, sz+1);
-
-      char *mem = kalloc();
-
-      if(mem == 0){
-        cprintf("Could not allocate a page.  Killing...\n");
-        myproc()->killed = 1;
-      } else {
-
-        memset(mem, 0, PGSIZE);
-
-
-        if(mappages(myproc()->pgdir, (char *)PGROUNDUP(sz), PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
-          cprintf("allocuvm out of memory (2).  Killing...\n");
-          kfree(mem);
-          myproc()->killed = 1;
-        }
-
-
-        cprintf("Page allocated!\n");
-        cprintf("Process size (in pages): %d\n", (myproc()->sz)/PGSIZE);
-
-      }*/
     }
-
-    //myproc()->killed = 1;
     break;
   //PAGEBREAK: 13
   default:
@@ -224,8 +174,10 @@ trap(struct trapframe *tf)
   // Force process exit if it has been killed and is in user space.
   // (If it is still executing in the kernel, let it keep running
   // until it gets to the regular system call return.)
-  if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
+  if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER){
+    //cprintf("Exiting\n");
     exit();
+  }
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.

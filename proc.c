@@ -160,6 +160,7 @@ userinit(void)
   p->state = RUNNABLE;
 
   release(&ptable.lock);
+  //createSwapFile(p);
 }
 
 // Grow current process's memory by n bytes.
@@ -224,16 +225,19 @@ fork(void)
 
   pid = np->pid;
 
-  //createSwapFile(np);
+  createSwapFile(np);
 
-  /*if(curproc->nPages > MAX_PHYS_PAGES){
-    char curSwapData[(MAX_PAGES - MAX_PHYS_PAGES)*PGSIZE];
+  if(curproc->nPages > MAX_PHYS_PAGES){
+    int nSwapPages = curproc->nPages - curproc->nPhysPages;
+    char swap[PGSIZE/4];
 
-    readFromSwapFile(curproc, curSwapData, 0, (curproc->nPages-MAX_PHYS_PAGES)*PGSIZE);
+    for(int i=0; i< (PGSIZE * nSwapPages) / sizeof(swap); i++){
+      readFromSwapFile(curproc, swap, i*sizeof(swap), sizeof(swap));
 
-    writeToSwapFile(np, curSwapData, 0, (curproc->nPages-MAX_PHYS_PAGES)*PGSIZE);
+      writeToSwapFile(np, swap, i*sizeof(swap), sizeof(swap));
+    }
 
-  }*/
+  }
 
   acquire(&ptable.lock);
 
@@ -242,6 +246,8 @@ fork(void)
   //createSwapFile(np);
 
   release(&ptable.lock);
+
+  //createSwapFile(np);
 
   return pid;
 }
@@ -252,9 +258,12 @@ fork(void)
 void
 exit(void)
 {
+
   struct proc *curproc = myproc();
   struct proc *p;
   int fd;
+  
+  removeSwapFile(curproc);
 
   if(curproc == initproc)
     panic("init exiting");
@@ -286,7 +295,6 @@ exit(void)
     }
   }
 
-  removeSwapFile(curproc);
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
