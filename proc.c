@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "fs.h"
 
 struct {
   struct spinlock lock;
@@ -130,8 +131,10 @@ userinit(void)
     panic("userinit: out of memory?");
   inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
   p->sz = PGSIZE;
-  p->nPages = 1;
-  p->nPhysPages = 1;
+  p->nPages = 0;
+  p->nPhysPages = 0;
+
+  //createSwapFile(p);
 
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
@@ -149,6 +152,9 @@ userinit(void)
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
+
+  //createSwapFile(p);
+
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
@@ -218,9 +224,22 @@ fork(void)
 
   pid = np->pid;
 
+  //createSwapFile(np);
+
+  /*if(curproc->nPages > MAX_PHYS_PAGES){
+    char curSwapData[(MAX_PAGES - MAX_PHYS_PAGES)*PGSIZE];
+
+    readFromSwapFile(curproc, curSwapData, 0, (curproc->nPages-MAX_PHYS_PAGES)*PGSIZE);
+
+    writeToSwapFile(np, curSwapData, 0, (curproc->nPages-MAX_PHYS_PAGES)*PGSIZE);
+
+  }*/
+
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+
+  //createSwapFile(np);
 
   release(&ptable.lock);
 
@@ -266,6 +285,8 @@ exit(void)
         wakeup1(initproc);
     }
   }
+
+  removeSwapFile(curproc);
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;

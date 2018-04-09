@@ -127,7 +127,7 @@ trap(struct trapframe *tf)
     // rcr2(), myproc()->pid, myproc()->nPages, tf->eip);
 
     if(myproc()->nPhysPages > MAX_PHYS_PAGES){
-      cprintf("Using too much space.  Killing...\n");
+      cprintf("Using more than physical memory. Swapping\n");
       myproc()->killed = 1;
     } else {
 

@@ -59,6 +59,12 @@ void            ideinit(void);
 void            ideintr(void);
 void            iderw(struct buf*);
 
+int 			removeSwapFile(struct proc*);
+int             createSwapFile(struct proc*);
+int 			writeToSwapFile(struct proc *, char*, uint, uint);
+int 			readFromSwapFile(struct proc *, char*, uint, uint);
+
+
 // ioapic.c
 void            ioapicenable(int irq, int cpu);
 extern uchar    ioapicid;

@@ -26,7 +26,7 @@ main(int argc, char *argv[])
 
   printf(1, "Malloc'ing %d bytes\n", MLC_SZ);
 
-  int* mem = (int *)sbrk(MLC_SZ/4096);//malloc(MLC_SZ);
+  int* mem = malloc(MLC_SZ);//(int *)sbrk(MLC_SZ/4096);//malloc(MLC_SZ);
 
   printf(1, "Malloc'd   %d bytes. 0x%x\n", MLC_SZ, mem);
 
@@ -64,32 +64,34 @@ main(int argc, char *argv[])
   sleep(100);
 
 
-  mem = (int *)sbrk(-MLC_SZ/4096);//malloc(MLC_SZ);
+  free(mem);//(int *)sbrk(-MLC_SZ/4096);//malloc(MLC_SZ);
+
+  printf(1, "Unmalloc'd %d pages\n", MLC_SZ);
 
   sleep(100);
 
   printf(1, "Malloc'ing %d bytes\n", MLC_SZ);
 
-  mem = (int *)sbrk(MLC_SZ/4096);//malloc(MLC_SZ);
+  mem = malloc(MLC_SZ*2);//(int *)sbrk(MLC_SZ*2/4096);//malloc(MLC_SZ);
 
-  printf(1, "Malloc'd   %d bytes. 0x%x\n", MLC_SZ, mem);
+  printf(1, "Malloc'd   %d bytes. 0x%x\n", MLC_SZ*2, mem);
 
   //memset(mem, 0, MLC_SZ);
 
-  printf(1, "Zeroed     %d pages\n", MLC_SZ/4096);
+  printf(1, "Zeroed     %d pages\n", MLC_SZ*2/4096);
 
   sleep(100);
 
   printf(1, "\nInserting numbers\n");
 
-  for(i=0; i<MLC_SZ/4; i++){
+  for(i=0; i<MLC_SZ*2/4; i++){
     mem[i] = i;
 
   }
 
   printf(1, "Finished Inserting numbers\n");
 
-  for(i=0; i<MLC_SZ/4; i++){
+  for(i=0; i<MLC_SZ*2/4; i++){
     if(mem[i] != i){
       //printf(1, "Error with memory! %d: %d\n", i, (mem[i]));
       m = i;
@@ -105,7 +107,7 @@ main(int argc, char *argv[])
   sleep(100);
 
 
-  mem = (int *)sbrk(-MLC_SZ/4096);//malloc(MLC_SZ);
+  mem = (int *)sbrk(-MLC_SZ*2/4096);//malloc(MLC_SZ);
 /*
   printf(1, "Malloc'ing %d bytes\n", MLC_SZ);
 
