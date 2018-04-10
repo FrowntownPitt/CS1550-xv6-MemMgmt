@@ -230,11 +230,13 @@ fork(void)
   if(curproc->nPages > MAX_PHYS_PAGES){
     int nSwapPages = curproc->nPages - curproc->nPhysPages;
     char swap[PGSIZE/4];
+      
+      int j;
 
-    for(int i=0; i< (PGSIZE * nSwapPages) / sizeof(swap); i++){
-      readFromSwapFile(curproc, swap, i*sizeof(swap), sizeof(swap));
+    for(j=0; j< (PGSIZE * nSwapPages) / sizeof(swap); j++){
+      readFromSwapFile(curproc, swap, j*sizeof(swap), sizeof(swap));
 
-      writeToSwapFile(np, swap, i*sizeof(swap), sizeof(swap));
+      writeToSwapFile(np, swap, j*sizeof(swap), sizeof(swap));
     }
 
   }
