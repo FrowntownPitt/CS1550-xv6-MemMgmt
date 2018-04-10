@@ -37,9 +37,10 @@ main(int argc, char *argv[])
   sleep(100);
 
   printf(1, "\nInserting numbers\n");
+    int j;
 
-  for(int i=0; i<MLC_SZ/4; i++){
-    mem[i] = i;
+  for(j=0; j<MLC_SZ/4; j++){
+    mem[j] = j;
 
   }
 
