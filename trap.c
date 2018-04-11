@@ -35,6 +35,20 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
+void addToStack(struct proc *p, struct physPages pg){
+
+
+
+  return;
+}
+
+struct physPages popFromStack(struct proc *p){
+
+
+
+  return p->stack[0];
+}
+
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)
@@ -87,39 +101,106 @@ trap(struct trapframe *tf)
 
     if(myproc()->nPages >= MAX_PAGES){
       cprintf("Using too much memory.  Killing...\n");
-      //myproc()->killed = 1;
+      myproc()->killed = 1;
     }
     else if(myproc()->nPages >= MAX_PHYS_PAGES){
+      cprintf("----------------------\n");
       cprintf("Using more than physical memory. Swapping...\n");
 
       struct proc *p = myproc();
 
-      pte_t *pg = walkpgdir(p->pgdir, (void *)rcr2(), 0);
+      uint new = rcr2();
 
-      if(pg && ((int)pg & PTE_PG)){
+      pte_t *pg = walkpgdir(p->pgdir, (void *)new, 0);
+
+      cprintf("Page reference 0x%x\nNew page address 0x%x\n", new, pg);
+
+      if(((int)*pg & PTE_PG)){
         cprintf("Swapped out\n");
+
+        cprintf("Offset in file: 0x%x\n", PTE_ADDR(*pg));
+
+        char * buffer = kalloc();
+
+        kfree(buffer);
+
+        p->killed = 1;
       } else {
         cprintf("Not swapped out\n");
-        myproc()->nPages++;
 
+        cprintf("Is present? %x\n", PTE_FLAGS(*pg));
+
+        pde_t *pde = &p->pgdir[PDX(new)];
+        pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
         //uint a = PGROUNDDOWN(rcr2());
 
+        cprintf("Page table: %x\n",(void *)ptab);
+
+        //static int e=2;
+
+        //int i = 10;
+        //cprintf("%x\n", V2P(ptab+10));
+
+        for(int i=4; i<NPTENTRIES; i++){
+          //if(e < 2) e = 2;
+          //int i = e;
+          //if(ptab[i] == 0)
+          //  continue;
+
+          pte_t* pte = (void *)V2P(ptab+i);
+          //pte_t* pte = (pte_t*)V2P((pte_t *)PTE_ADDR(*(pde+i)));
+
+          if(*pte & PTE_P){
+            cprintf("Picked victim PTE: 0x%x, addr 0x%x\n", *pte, pte);
+
+
+            //cprintf("Victim phys addr 0x%x\n", V2P(PTE_ADDR(ptab[i])));
+
+            //void *victim = (void *)PTE_ADDR(ptab[i]);
+            
+            // Swap data to swap file
+
+            cprintf("0x%x Writing %d bytes to offset 0x%x\n", V2P(*pte),
+              PGSIZE, PGSIZE * (p->nPages - p->nPhysPages));
+
+            writeToSwapFile(p, (void *)V2P(*pte), PGSIZE * (p->nPages - p->nPhysPages), PGSIZE);
+
+            //cprintf("\n");
+
+            *pte &= ~PTE_P;
+            *pte |=  PTE_PG;
+
+
+            cprintf("New victim flags %x\n", *pte);
+
+            mappages(p->pgdir, (void *)PGROUNDDOWN(new), PGSIZE, (uint)(*pte), PTE_W|PTE_U);
+
+            *pte = PGSIZE * (p->nPages - p->nPhysPages) | PTE_FLAGS(*pte);
+
+
+            //myproc()->nPages++;
+            //cprintf("Mapped? %d\n", r);
+            //cprintf("Mapped new memory from 0x%x to 0x%x\n", PGROUNDDOWN(new), victim);
+            
+            break;
+          }
+        }
 
       }
 
-      cprintf("New mem addr 0x%x\n", pg);
+      //cprintf("New mem addr 0x%x\n", rcr2());
 
-      pte_t *victim = walkpgdir(p->pgdir, (void *)(p->pgdir)[0], 0);
+      //pte_t *victim = walkpgdir(p->pgdir, (void *)(p->pgdir)[0], 0);
 
-      cprintf("Victim: 0x%x\n", (void *)victim);
+      //cprintf("Victim: 0x%x\n", (void *)victim);
 
       
-
-      //myproc()->nPages++;
+      cprintf("----------------------\n\n");
+      p->nPages++;
       //myproc()->killed = 1;
     } else {
 
-      cprintf("Allocating memory\n");
+      //cprintf("Allocating memory\n");
 
       if(rcr2() > KERNBASE){
         cprintf("Memory address too high. Ignoring request\n");

@@ -6,7 +6,7 @@
 //#include "fcntl.h"
 
 #define STK_SZ 512
-#define MLC_SZ 4096*2
+#define MLC_SZ 4096*16
 int
 main(int argc, char *argv[])
 {
@@ -37,33 +37,41 @@ main(int argc, char *argv[])
   sleep(100);
 
   printf(1, "\nInserting numbers\n");
-    int j;
+    
+  int j;
 
-  for(j=0; j<MLC_SZ/4; j++){
+  for(j=0; j<(MLC_SZ)/4; j++){
     mem[j] = j;
 
   }
 
   printf(1, "Finished Inserting numbers\n");
 
-  int m = 0;
+  sleep(100);
+
+  printf(1, "mem[0x%x]=%x\n", 4096*2/4, mem[4096*2/4]);
+
+  /*nt m = 0;
   int c = 0;
   int i;
-  for(i=0; i<MLC_SZ/4; i++){
+  for(i=MLC_SZ/4-1; i>=0; i--){
     if(mem[i] != i){
-      //printf(1, "Error with memory! %d: %d\n", i, (mem[i]));
+      printf(1, "Error with memory! %d: %d, %d\n", i, (mem[i]), c);
       m = i;
       c++;
     }
   }
+
+
 
   if(c > 0 || m > 0){
     printf(1, "Finished checking numbers. %d errors. Last error at 0x%x\n\n", &(mem[m]));
   } else {
     printf(1, "Finished checking numbers. last address: 0x%x\n\n", &(mem[i-1]));
   }
-  sleep(100);
+  sleep(10);
 
+  
 
   free(mem);//(int *)sbrk(-MLC_SZ/4096);//malloc(MLC_SZ);
 
@@ -108,7 +116,7 @@ main(int argc, char *argv[])
   sleep(100);
 
 
-  mem = (int *)sbrk(-MLC_SZ*2/4096);//malloc(MLC_SZ);
+  mem = (int *)sbrk(-MLC_SZ*2/4096);//malloc(MLC_SZ);*/
 /*
   printf(1, "Malloc'ing %d bytes\n", MLC_SZ);
 
@@ -134,6 +142,9 @@ main(int argc, char *argv[])
   printf(1, "Zeroed     %d pages\n", MLC_SZ/4096);
 
   sleep(100);*/
+
+
+  sleep(10);
 
   free(mem);
 
