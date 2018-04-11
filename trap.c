@@ -49,6 +49,60 @@ struct physPages popFromStack(struct proc *p){
   return p->stack[0];
 }
 
+pte_t * selectVictimPage(struct proc *p){
+
+  pde_t *pde = &p->pgdir[0];
+  pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
+
+  for(int i=4; i<NPTENTRIES; i++){
+    //if(e < 2) e = 2;
+    //int i = e;
+    //if(ptab[i] == 0)
+    //  continue;
+
+    pte_t* pte = (void *)V2P(ptab+i);
+    //pte_t* pte = (pte_t*)V2P((pte_t *)PTE_ADDR(*(pde+i)));
+
+    if(*pte & PTE_P){
+      //cprintf("Picked victim PTE: 0x%x, addr 0x%x\n", *pte, pte);
+
+
+      //cprintf("Victim phys addr 0x%x\n", V2P(PTE_ADDR(ptab[i])));
+
+      //void *victim = (void *)PTE_ADDR(ptab[i]);
+      
+      // Swap data to swap file
+
+      //cprintf("0x%x Writing %d bytes to offset 0x%x\n", V2P(*pte),
+      //  PGSIZE, PGSIZE * (p->nPages - p->nPhysPages));
+
+      //writeToSwapFile(p, (void *)V2P(*pte), PGSIZE * (p->nPages - p->nPhysPages), PGSIZE);
+
+      //cprintf("\n");
+
+      //*pte &= ~PTE_P;
+      //*pte |=  PTE_PG;
+
+
+      //cprintf("New victim flags %x\n", *pte);
+
+      //mappages(p->pgdir, (void *)PGROUNDDOWN(new), PGSIZE, (uint)(*pte), PTE_W|PTE_U);
+
+      //*pte = PGSIZE * (p->nPages - p->nPhysPages) | PTE_FLAGS(*pte);
+
+
+      //myproc()->nPages++;
+      //cprintf("Mapped? %d\n", r);
+      //cprintf("Mapped new memory from 0x%x to 0x%x\n", PGROUNDDOWN(new), victim);
+      
+      //break;
+      return pte;
+    }
+  }
+
+  return 0;
+}
+
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)
@@ -122,6 +176,10 @@ trap(struct trapframe *tf)
 
         char * buffer = kalloc();
 
+        readFromSwapFile(p, buffer, PTE_ADDR(*pg), PGSIZE);
+
+
+
         kfree(buffer);
 
         p->killed = 1;
@@ -130,18 +188,18 @@ trap(struct trapframe *tf)
 
         cprintf("Is present? %x\n", PTE_FLAGS(*pg));
 
-        pde_t *pde = &p->pgdir[PDX(new)];
-        pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
+        //pde_t *pde = &p->pgdir[PDX(new)];
+        //pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
         //uint a = PGROUNDDOWN(rcr2());
 
-        cprintf("Page table: %x\n",(void *)ptab);
+        //cprintf("Page table: %x\n",(void *)ptab);
 
         //static int e=2;
 
         //int i = 10;
         //cprintf("%x\n", V2P(ptab+10));
 
-        for(int i=4; i<NPTENTRIES; i++){
+        /*for(int i=4; i<NPTENTRIES; i++){
           //if(e < 2) e = 2;
           //int i = e;
           //if(ptab[i] == 0)
@@ -151,8 +209,11 @@ trap(struct trapframe *tf)
           //pte_t* pte = (pte_t*)V2P((pte_t *)PTE_ADDR(*(pde+i)));
 
           if(*pte & PTE_P){
-            cprintf("Picked victim PTE: 0x%x, addr 0x%x\n", *pte, pte);
+            */
 
+        pte_t * pte = selectVictimPage(p);
+            cprintf("Picked victim PTE: 0x%x, addr 0x%x\n", *pte, pte);
+  
 
             //cprintf("Victim phys addr 0x%x\n", V2P(PTE_ADDR(ptab[i])));
 
@@ -182,9 +243,8 @@ trap(struct trapframe *tf)
             //cprintf("Mapped? %d\n", r);
             //cprintf("Mapped new memory from 0x%x to 0x%x\n", PGROUNDDOWN(new), victim);
             
-            break;
-          }
-        }
+          
+        
 
       }
 
