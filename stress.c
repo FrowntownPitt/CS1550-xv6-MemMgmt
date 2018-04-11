@@ -51,10 +51,10 @@ main(int argc, char *argv[])
 
   printf(1, "mem[0x%x]=%x\n", 4096*2/4, mem[4096*2/4]);
 
-  /*nt m = 0;
+  int m = 0;
   int c = 0;
   int i;
-  for(i=MLC_SZ/4-1; i>=0; i--){
+  for(i=0; i<MLC_SZ/4; i++){
     if(mem[i] != i){
       printf(1, "Error with memory! %d: %d, %d\n", i, (mem[i]), c);
       m = i;
@@ -67,10 +67,10 @@ main(int argc, char *argv[])
   if(c > 0 || m > 0){
     printf(1, "Finished checking numbers. %d errors. Last error at 0x%x\n\n", &(mem[m]));
   } else {
-    printf(1, "Finished checking numbers. last address: 0x%x\n\n", &(mem[i-1]));
+    printf(1, "Finished checking numbers. No errors. last address: 0x%x\n\n", &(mem[i-1]));
   }
   sleep(10);
-
+/*
   
 
   free(mem);//(int *)sbrk(-MLC_SZ/4096);//malloc(MLC_SZ);
