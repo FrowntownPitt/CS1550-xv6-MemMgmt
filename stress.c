@@ -6,7 +6,7 @@
 //#include "fcntl.h"
 
 #define STK_SZ 512
-#define MLC_SZ 4096*14
+#define MLC_SZ 4096*26
 int
 main(int argc, char *argv[])
 {
@@ -18,9 +18,6 @@ main(int argc, char *argv[])
   //char data[STK_SZ];
 
   //printf(1, "Stack allocated  %d bytes\n", sizeof(data));
-
-
-  printf(1, "\n\n\n");
 
   sleep(100);
 

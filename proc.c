@@ -212,6 +212,13 @@ fork(void)
   np->pageFaults = 0;
   np->fifoPointer = 0;
 
+  np->pds.head = 0;
+  np->pds.end  = 0;
+
+  for(i = 0; i < MAX_PHYS_PAGES; i++){
+    np->pds.list[i].used = 0;
+  }
+
   np->parent = curproc;
   *np->tf = *curproc->tf;
 

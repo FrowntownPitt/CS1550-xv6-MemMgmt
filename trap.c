@@ -35,18 +35,110 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
-void addToStack(struct proc *p, struct physPages pg){
+void listDump(struct proc *p){
+  struct physPages cur = p->pds.list[p->pds.head];
 
+  int i;
+  for(i=0; i<MAX_PHYS_PAGES; i++){
+    if(!cur.used)
+      break;
+    cprintf("(0x%x, %d), ", cur.va, cur.next);
+    cur = p->pds.list[cur.next];
+  }
 
-
-  return;
+  cprintf("\n");
 }
 
-struct physPages popFromStack(struct proc *p){
+void listRemove(struct proc *p, uint va){
+  struct physPages *prev = &p->pds.list[p->pds.head];
 
+  if(prev->va == va){ // edge case, head points to the target. move head to next
 
+    p->pds.head = prev->next;
+    prev->used = 0;
 
-  return p->stack[0];
+    return;
+  }
+
+  int i;
+  int prevInd = p->pds.head;
+  for(i=0; i<MAX_PHYS_PAGES-1; i++){
+    if(p->pds.list[prev->next].va == va){ // next is target. Move pointers around.
+      if(prev->next == p->pds.end){ // edge case, target is end. Move end to prev.
+        p->pds.end = prevInd;
+
+        p->pds.list[prev->next].used = 0;
+      } else {
+        struct physPages *next = &p->pds.list[prev->next];
+
+        prev->next = next->next;
+        next->used = 0;
+      }
+      cprintf("Rmv: ");
+      listDump(p);
+      return;
+    }
+
+    prevInd = prev->next;
+    prev = &p->pds.list[prev->next];
+  }
+}
+
+int listContains(struct proc *p, uint va){
+
+  for(int i=0; i<MAX_PHYS_PAGES; i++){
+    if(p->pds.list[i].used)
+      return 1;
+  }
+
+  return 0;
+}
+
+void listAdd(struct proc *p, uint va){
+
+  if(listContains(p, va)){
+    listRemove(p, va);
+  }
+
+  if(p->pds.list[p->pds.head].used == 0){
+    p->pds.end = 0;
+    p->pds.list[0].va = va;
+    p->pds.list[0].next = 1;
+    p->pds.list[0].used = 1;
+  } else {
+
+    struct physPages *last = &p->pds.list[p->pds.end];
+
+    struct physPages *avail = &p->pds.list[p->pds.head];
+    int i;
+    for(i=0; i<MAX_PHYS_PAGES; i++){
+      if(p->pds.list[i].used == 0){
+        avail = &p->pds.list[i];
+        break;
+      }
+    }
+
+    avail->va = va;
+    avail->used = 1;
+
+    last->next = i;
+
+    p->pds.end = i;
+  }
+
+  cprintf("Add: ");
+  listDump(p);
+}
+
+uint listPop(struct proc *p){
+  uint pop = p->pds.list[p->pds.head].va;
+
+  p->pds.list[p->pds.head].used = 0;
+  p->pds.head = p->pds.list[p->pds.head].next;
+
+  cprintf("Pop: ");
+  listDump(p);
+  return pop;
 }
 
 uint randint(){
@@ -57,31 +149,24 @@ uint randint(){
 
   seed = (a * seed + c) % m;
 
-  //seed = x;
-
   return seed;
-
 }
 
 pte_t * selectVictimPage(struct proc *p){
 
-  pde_t *pde = &p->pgdir[0];
-  pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
 
 #ifdef FIFO
 
-  int *i = &p->fifoPointer;
+  //return listPop(p);
+  uint va = listPop(p);
+  pte_t *pte = walkpgdir(p->pgdir, (void *)va, 0);
 
-  for(; *i<NPTENTRIES; *i = (*i+1)%NPTENTRIES){
-
-    pte_t* pte = (void *)V2P(ptab+*i);
-
-    if(*pte & PTE_P){
-      return pte;
-    }
-  }
+  return pte;
 
 #elif RAND
+
+  pde_t *pde = &p->pgdir[0];
+  pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
 
   int *i = &p->fifoPointer;
 
@@ -102,10 +187,32 @@ pte_t * selectVictimPage(struct proc *p){
 
   return pte;
 
-#else // Default: LRU
+#elif LRU // Default: LRU
+
+  uint va = listPop(p);
+  pte_t *pte = walkpgdir(p->pgdir, (void *)va, 0);
+
+  return pte;
+
 #endif
 
   return 0;
+}
+
+// Update the page data structure (Only for LRU)
+void updateLRU(struct proc *p){
+  pte_t *pte;
+  int i;
+  for(i=0; i<p->sz; i+=PGSIZE){
+    pte = walkpgdir(p->pgdir, (char *)i, 0);
+    if((*pte & PTE_A) && (*pte & PTE_P)){ //check PTE_A
+      if(listContains(p, (uint)i)){
+        listRemove(p, (uint)i);
+        listAdd(p, (uint)i);
+      }
+    }
+    *pte &= ~PTE_A; //reset PTE_A
+  }
 }
 
 //PAGEBREAK: 41
@@ -127,8 +234,14 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+
       wakeup(&ticks);
       release(&tickslock);
+
+      #ifdef LRU
+      //struct proc* p = myproc();
+      //updateLRU(p);
+      #endif
     }
     lapiceoi();
     break;
@@ -157,11 +270,11 @@ trap(struct trapframe *tf)
 
     myproc()->pageFaults++;
 
-    if(myproc()->nPages >= MAX_PAGES){
+    if(myproc()->nPages >= MAX_PAGES){ // Memory usage beyond limits, kill the process
       cprintf("Using too much memory.  Killing...\n");
       myproc()->killed = 1;
     }
-    else if(myproc()->nPages >= MAX_PHYS_PAGES){
+    else if(myproc()->nPages >= MAX_PHYS_PAGES){ // Must swap a page out
 
       struct proc *p = myproc();
 
@@ -170,9 +283,9 @@ trap(struct trapframe *tf)
       pte_t *pg = walkpgdir(p->pgdir, (void *)new, 0);
 
 
-      if(((int)*pg & PTE_PG)){
+      if(((int)*pg & PTE_PG)){ // Faulted page was swapped out
 
-        cprintf("Page reference 0x%x\n", new);
+        //cprintf("Page reference 0x%x\n", new);
 
         uint fileOffset = PTE_ADDR(*pg);
 
@@ -181,6 +294,8 @@ trap(struct trapframe *tf)
         readFromSwapFile(p, buffer, fileOffset, PGSIZE);
 
         pte_t * victim = selectVictimPage(p);
+
+        //cprintf("Swapped out victim: 0x%x\n", victim);
 
         writeToSwapFile(p, (void *)V2P(PTE_ADDR(*victim)), fileOffset, PGSIZE);
         
@@ -194,8 +309,10 @@ trap(struct trapframe *tf)
         *victim = fileOffset | PTE_FLAGS(*victim);
 
         kfree(buffer);
-      } else {
+
+      } else {  // Faulted page does not yet exist
         pte_t * pte = selectVictimPage(p);
+        //cprintf("Not swapped out victim: 0x%x\n", pte);
 
         writeToSwapFile(p, (void *)V2P(PTE_ADDR(*pte)), PGSIZE * (p->nPages - p->nPhysPages), PGSIZE);
 
@@ -208,10 +325,13 @@ trap(struct trapframe *tf)
 
         memset((void *)V2P(PTE_ADDR(*pte)), 0, PGSIZE);
 
+
         p->nPages++;
 
       }
-    } else {
+
+      listAdd(p, PGROUNDDOWN(new));
+    } else { // Have not run out of physical memory yet
 
       uint a = PGROUNDDOWN(rcr2());
 
@@ -225,6 +345,8 @@ trap(struct trapframe *tf)
         break;
       }
       memset(mem, 0, PGSIZE);
+
+      listAdd(curproc, a);
 
       if(mappages(curproc->pgdir, (char *)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
         cprintf("Could not allocate more memory. Killing...\n");

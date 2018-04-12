@@ -29,7 +29,7 @@ OBJS = \
 	vm.o\
 
 # Page Management algorithm
-SELECTION = RAND
+SELECTION = FIFO
 
 # Cross-compiling (e.g., on Mac OS X)
 # TOOLPREFIX = i386-jos-elf

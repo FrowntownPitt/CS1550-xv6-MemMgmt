@@ -37,7 +37,9 @@ struct context {
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 struct physPages {
-  pte_t *pte;
+  int next;
+  uint va;
+  int used;
 };
 
 // Per-process state
@@ -51,7 +53,12 @@ struct proc {
   int pageFaults;
 
   int fifoPointer;
-  struct physPages stack[MAX_PHYS_PAGES];     // Array (modified stack) for LRU
+
+  struct {
+    struct physPages list[MAX_PHYS_PAGES];     // Array (modified stack) for pds
+    int head;
+    int end;
+  } pds;
 
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
