@@ -21,6 +21,14 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+
+int getproc(struct proc **s){
+    acquire(&ptable.lock);
+    *s = ptable.proc;
+    release(&ptable.lock);
+    return 0;
+}
+
 void
 pinit(void)
 {
@@ -563,6 +571,7 @@ procdump(void)
   char *state;
   //uint pc[10];
 
+  //acquire(&ptable.lock);
   cprintf("\n pid \t| state \t| name   \t| Size \t| # Pages\t\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
@@ -572,9 +581,10 @@ procdump(void)
     else
       state = "???";
     cprintf(" %d \t| %s \t| %s\t| ", p->pid, state, p->name);
+    cprintf("%d \t| %d \t", p->sz/PGSIZE, p->nPages);
+    cprintf("");
     if(p->state == SLEEPING){
 
-      cprintf("%d \t| %d \t", p->sz/PGSIZE, p->nPages);
 
       //getcallerpcs((uint*)p->context->ebp+2, pc);
       //or(i=0; i<10 && pc[i] != 0; i++)
@@ -582,5 +592,6 @@ procdump(void)
     }
     cprintf("\n");
   }
+  //release(&ptable.lock);
   cprintf("\n");
 }

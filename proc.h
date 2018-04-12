@@ -51,6 +51,7 @@ struct proc {
   int nPhysPages;              // number of pages in physical memory
 
   int pageFaults;
+  int pageSwapped;
 
   int fifoPointer;
 
