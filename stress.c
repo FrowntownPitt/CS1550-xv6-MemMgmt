@@ -6,7 +6,7 @@
 //#include "fcntl.h"
 
 #define STK_SZ 512
-#define MLC_SZ 4096*16
+#define MLC_SZ 4096*14
 int
 main(int argc, char *argv[])
 {
@@ -42,14 +42,13 @@ main(int argc, char *argv[])
 
   for(j=0; j<(MLC_SZ)/4; j++){
     mem[j] = j;
-
   }
 
   printf(1, "Finished Inserting numbers\n");
 
   sleep(100);
 
-  printf(1, "mem[0x%x]=%x\n", 4096*2/4, mem[4096*2/4]);
+  //printf(1, "mem[0x%x]=%x\n", 4096*2/4, mem[4096*2/4]);
 
   int m = 0;
   int c = 0;

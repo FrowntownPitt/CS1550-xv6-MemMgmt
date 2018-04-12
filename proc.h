@@ -1,3 +1,5 @@
+#include "memlayout.h"
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -34,6 +36,10 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct physPages {
+  pte_t *pte;
+};
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -41,6 +47,11 @@ struct proc {
   struct file *swapFile;       // Page File
   int nPages;                  // number of virtual pages
   int nPhysPages;              // number of pages in physical memory
+
+  int pageFaults;
+
+  int fifoPointer;
+  struct physPages stack[MAX_PHYS_PAGES];     // Array (modified stack) for LRU
 
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state

@@ -209,6 +209,8 @@ fork(void)
   np->sz = curproc->sz;
   np->nPages = curproc->nPages;
   np->nPhysPages = curproc->nPhysPages;
+  np->pageFaults = 0;
+  np->fifoPointer = 0;
 
   np->parent = curproc;
   *np->tf = *curproc->tf;
@@ -231,7 +233,8 @@ fork(void)
     int nSwapPages = curproc->nPages - curproc->nPhysPages;
     char swap[PGSIZE/4];
       
-      int j;
+    
+    int j;
 
     for(j=0; j< (PGSIZE * nSwapPages) / sizeof(swap); j++){
       readFromSwapFile(curproc, swap, j*sizeof(swap), sizeof(swap));
@@ -553,7 +556,7 @@ procdump(void)
   char *state;
   //uint pc[10];
 
-  cprintf("\n pid \t| state\t| name   \t| Size \t| # Pages\t\n");
+  cprintf("\n pid \t| state \t| name   \t| Size \t| # Pages\t\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
