@@ -174,27 +174,35 @@ pte_t * selectVictimPage(struct proc *p){
 
 #elif RAND // Paul
 
-  pde_t *pde = &p->pgdir[0];
-  pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
+  //pde_t *pde = &p->pgdir[0];
+  //pte_t *ptab = (pte_t*)PTE_ADDR(*pde);
 
   //int *i = &p->fifoPointer;
 
   uint rnd = randint(); // Pick a random number
 
-  rnd %= p->nPhysPages; // Squash random number to the range of selectable entries
+  rnd = rnd % p->nPhysPages; // Squash random number to the range of selectable entries
 
-  pte_t* pte = 0;
+  //pte_t* pte = 0;
 
   int i = 0;
   // Loop through the page table until we've seen rnd present pages, then choose that one
-  for(i=0; rnd > 0; i = (i+1)%NPTENTRIES){
+  /*for(i=0; rnd > 0; i = (i+1)%NPTENTRIES){
 
     pte = (void *)V2P(ptab+i);
 
     if(*pte & PTE_P){
       rnd--;
     }
+  }*/
+
+  uint a = listPop(p);
+  for(i=0; i<rnd; i++){
+    listAdd(p, a);
+    a = listPop(p);
   }
+
+  pte_t *pte = walkpgdir(p->pgdir, (void *)a, 0); // Convert the va to pte
 
   return pte;
 
