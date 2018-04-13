@@ -180,6 +180,7 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_stress\
+	_m\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

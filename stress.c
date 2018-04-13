@@ -6,7 +6,7 @@
 //#include "fcntl.h"
 
 #define STK_SZ 512
-#define MLC_SZ 4096*26
+#define MLC_SZ 4096*27
 int
 main(int argc, char *argv[])
 {
