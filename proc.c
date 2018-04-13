@@ -611,12 +611,20 @@ procdump(void)
   int numFreePages = ((totalPhysical-totalKernel) - currUsed);
   int calcTotal = totalPhysical - totalKernel;
 
-  float available = ((float)numFreePages) / ((float)calcTotal);
+  //double available = ((double)numFreePages) / ((double)calcTotal);
 
-  cprintf("Free pages in the system: %d.%d%%\n", (int)(available*100),
-            ((int)(available*100000) - ((int)(available*100))*1000));
+  //int intPart = (int)(available * 100);
+  //available = intPart;
+  //int decPart = intPart;
+  //available = intPart;
+  //long intPart = numFreePages - calcTotal;
+  //int decPart = (int)(available*1000*100);
+  //decPart = decPart - intPart*1000;
+
+  //cprintf("Free pages in the system: %d.%d%%\n", intPart,
+  //        0);
   //release(&ptable.lock);
-//   cprintf("This is the calculation for the percetage of free pages: %d\%\n",
-//             (100*(numFreePages) / calcTotalMem));
+   cprintf("Free pages in the system: %d\% (%d pages)\n",
+             (100*(numFreePages) / calcTotal), numFreePages);
   cprintf("\n");
 }

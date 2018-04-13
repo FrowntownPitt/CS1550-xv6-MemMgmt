@@ -90,7 +90,8 @@ void listRemove(struct proc *p, uint va){
 // Returns whether the list contains an element with va
 int listContains(struct proc *p, uint va){
 
-  for(int i=0; i<MAX_PHYS_PAGES; i++){
+  int i=0;
+  for(i=0; i<MAX_PHYS_PAGES; i++){
     if(p->pds.list[i].used && p->pds.list[i].va == va)
       return 1;
   }
