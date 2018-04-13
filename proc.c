@@ -576,6 +576,7 @@ procdump(void)
   struct proc *p;
   char *state;
   //uint pc[10];
+  int currAvailable = 0;
 
   //acquire(&ptable.lock);
   cprintf("\n pid \t| state \t| name   \t| # Pages\t|"
@@ -587,6 +588,8 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
+    x = p->nPhysPages;
+    currAvailable += x;
     cprintf(" %d \t| %s \t| %s%s\t| ", p->pid, state, p->name, 
           (strlen(p->name) < 5) ? "\t" : "" );
     cprintf("%d     \t| %d     \t| %d     \t| %d     \t", p->nPages, p->nPages-p->nPhysPages, 
@@ -605,9 +608,10 @@ procdump(void)
 
   int totalPhysical  = (512*1024*1024/PGSIZE); //512 megabytes
   int totalKernel    = (PGROUNDUP(V2P(end))/PGSIZE);
-  int totalAvailable = totalPhysical - totalKernel;
+  int numFreePages = ((totalPhysical-totalKernel) - currAvailable);
+  int calcTotal = totalPhysical - totalKernel;
 
-  float available = ((float)totalAvailable) / ((float)totalPhysical);
+  float available = ((float)numFreePages) / ((float)calcTotal);
 
   cprintf("Free pages in the system: %d.%d%%\n", (int)(available*100),
             ((int)(available*100000) - ((int)(available*100))*1000));
