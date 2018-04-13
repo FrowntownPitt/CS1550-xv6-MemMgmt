@@ -18,6 +18,7 @@ static struct proc *initproc;
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
+extern char end[];
 
 static void wakeup1(void *chan);
 
@@ -282,6 +283,11 @@ exit(void)
   struct proc *curproc = myproc();
   struct proc *p;
   int fd;
+
+  #ifdef TRUE
+  //cprintf("Exiting\n");
+  procdump();
+  #endif
   
   removeSwapFile(curproc);
 
@@ -570,9 +576,11 @@ procdump(void)
   struct proc *p;
   char *state;
   //uint pc[10];
+  int currUsed = 0;
 
   //acquire(&ptable.lock);
-  cprintf("\n pid \t| state \t| name   \t| Size \t| # Pages\t\n");
+  cprintf("\n pid \t| state \t| name   \t| # Pages\t|"
+    " Pgd out\t| Faults\t| Pgd cnt\t\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -580,8 +588,12 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf(" %d \t| %s \t| %s\t| ", p->pid, state, p->name);
-    cprintf("%d \t| %d \t", p->sz/PGSIZE, p->nPages);
+    int x = p->nPhysPages;
+    currUsed += x;
+    cprintf(" %d \t| %s \t| %s%s\t| ", p->pid, state, p->name, 
+          (strlen(p->name) < 5) ? "\t" : "" );
+    cprintf("%d     \t| %d     \t| %d     \t| %d     \t", p->nPages, p->nPages-p->nPhysPages, 
+          p->pageFaults, p->pageSwapped);
     cprintf("");
     if(p->state == SLEEPING){
 
@@ -590,8 +602,21 @@ procdump(void)
       //or(i=0; i<10 && pc[i] != 0; i++)
       //  cprintf(" %p", pc[i]);
     }
+
     cprintf("\n");
   }
+
+  int totalPhysical  = (512*1024*1024/PGSIZE); //512 megabytes
+  int totalKernel    = (PGROUNDUP(V2P(end))/PGSIZE);
+  int numFreePages = ((totalPhysical-totalKernel) - currUsed);
+  int calcTotal = totalPhysical - totalKernel;
+
+  float available = ((float)numFreePages) / ((float)calcTotal);
+
+  cprintf("Free pages in the system: %d.%d%%\n", (int)(available*100),
+            ((int)(available*100000) - ((int)(available*100))*1000));
   //release(&ptable.lock);
+//   cprintf("This is the calculation for the percetage of free pages: %d\%\n",
+//             (100*(numFreePages) / calcTotalMem));
   cprintf("\n");
 }
