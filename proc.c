@@ -604,15 +604,21 @@ procdump(void)
     }
     //release(&ptable.lock);
     // calculates percentage of free pages in the system
-    double full = 536870912/PGSIZE;
-    cprintf("Full is: %f", full);
-    double kernal = PGROUNDUP(V2P(end))/PGSIZE;
-    cprintf("Kernal is: %f", kernal);
+    int full = 536870912/PGSIZE;
+    //cprintf("Full is: %d", full);
+    int kernal = PGROUNDUP(V2P(end))/PGSIZE;
+    //cprintf("Kernal is: %d", kernal);
     // take the total available memory and subtract it with the current amount of memory
     // then divide it by the total available memory
-    double numFreePages = ((full-kernal) - currAvailable);
-    double calcPercentage = (numFreePages / (full-kernal)) * 100;
-    cprintf("This is the calculation for the percetage of free pages: %f\n", calcPercentage);
+    int numFreePages = ((full-kernal) - currAvailable);
+    //int calcPercentage = (numFreePages / (full-kernal)) * 100;
+    int calcTotalMem = full - kernal;
+    if (numFreePages/calcTotalMem == 1) {
+        cprintf("This is the calculation for the percetage of free pages: 100 percent");
+    }
+    else {
+        cprintf("This is the calculation for the percetage of free pages: %d/%d\n", numFreePages, calcTotalMem);
+    }
     cprintf("\n");
     cprintf("Press Enter");
 }
