@@ -609,7 +609,8 @@ procdump(void)
 
   float available = ((float)totalAvailable) / ((float)totalPhysical);
 
-  cprintf("Free pages in the system: 0.%d%%\n", (int)(available*100000));
+  cprintf("Free pages in the system: %d.%d%%\n", (int)(available*100),
+            ((int)(available*100000) - ((int)(available*100))*1000));
   //release(&ptable.lock);
   cprintf("\n");
 }
