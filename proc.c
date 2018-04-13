@@ -616,5 +616,7 @@ procdump(void)
   cprintf("Free pages in the system: %d.%d%%\n", (int)(available*100),
             ((int)(available*100000) - ((int)(available*100))*1000));
   //release(&ptable.lock);
+//   cprintf("This is the calculation for the percetage of free pages: %d\%\n",
+//             (100*(numFreePages) / calcTotalMem));
   cprintf("\n");
 }
