@@ -16,7 +16,7 @@ main(int argc, char *argv[])
 
 	} else {
 
-		int numPages = atoi(argv[1]);
+		int numPages = atoi(argv[1]); // converts string to an integer
 
 		int * mem = (int *)sbrk(numPages);
 
@@ -27,14 +27,17 @@ main(int argc, char *argv[])
 			
 
 			//printf(1, "argv[2] loc: 0x%x\n", &argv[2]);
-			//printf(1, "First num loc: 0x%x\n", num);
+			printf(1, "First num loc: 0x%x\n", num); // prints the address for the first location
 
 			printf(1, "num[%d]: %d\n", i, atoi((num+1)));
 			int page = atoi(num+1);
 
-			mem[(page-1)*PGSIZE/sizeof(int)] = i;
+			mem[(page-1)*PGSIZE/sizeof(int)] = i; //
 			
 			num = strchr(num+1, ',');
+            sbrk(PGSIZE);
+            printf(1, "Second num loc: 0x%x\n", num); // prints the address for the second location (causes a page fault)
+            printf(1, "num[%d]: %d\n", i, atoi((num+1)));
 		}
 
 		sbrk(-numPages);
@@ -43,6 +46,7 @@ main(int argc, char *argv[])
 
 	if(fork() != 0){
 		wait();
+        //sbrk(-16 * PGSIZE);
 	} else {
 		printf(1, "Child.\n");
 		exit();
