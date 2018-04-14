@@ -216,6 +216,8 @@ pte_t * selectVictimPage(struct proc *p){
 
 #endif
 
+  return 0;
+
 }
 
 // Update the page data structure (Only for LRU)
